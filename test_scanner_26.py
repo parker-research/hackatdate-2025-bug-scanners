@@ -1,6 +1,6 @@
 # import pyslang
 
-from scan_26_single_const_assign import (
+from scanner_26_single_const_assign import (
     extract_declared_identifiers,
     count_constant_assignments_to_identifier,
     find_all_single_constant_assignments_in_verilog,

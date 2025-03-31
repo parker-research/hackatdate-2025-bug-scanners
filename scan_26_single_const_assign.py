@@ -8,6 +8,7 @@ import argparse
 from typing import Literal
 from collections.abc import Iterator
 import re
+import json
 
 from pathlib import Path
 
@@ -162,12 +163,24 @@ def main():
         type=str,
         help="Path to the project folder containing Verilog files.",
     )
+    parser.add_argument(
+        "-o",
+        "--output-jsonl",
+        type=str,
+        help="Path to the output JSONL file.",
+        dest="output_jsonl_path",
+    )
     args = parser.parse_args()
     project_folder_path = Path(args.project_folder_path)
     if not project_folder_path.is_dir():
         raise ValueError(f"{project_folder_path} is not a valid directory.")
     if not project_folder_path.exists():
         raise ValueError(f"{project_folder_path} does not exist.")
+
+    if args.output_jsonl_path:
+        output_jsonl_path: Path | None = Path(args.output_jsonl_path)
+    else:
+        output_jsonl_path = None
 
     # Find all single constant assignments in the project folder.
     results: list[tuple[str, str, str]] = []
@@ -178,6 +191,15 @@ def main():
     ) in find_all_single_constant_assignments_in_project(project_folder_path):
         print(f"Identifier: {identifier}, Type: {var_type}, File: {file_path}")
         results.append((identifier, var_type, file_path))
+
+        if output_jsonl_path:
+            result_row = {
+                "identifier": identifier,
+                "type": var_type,
+                "file": file_path,
+            }
+            with open(output_jsonl_path, "a") as jsonl_file:
+                jsonl_file.write(json.dumps(result_row) + "\n")
 
     print(f"Found {len(results)} single constant assignments.")
 

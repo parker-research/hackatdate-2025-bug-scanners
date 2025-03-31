@@ -1,2 +1,4 @@
 pyslang
 pytest
+openai
+loguru

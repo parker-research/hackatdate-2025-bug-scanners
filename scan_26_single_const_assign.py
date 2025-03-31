@@ -1,5 +1,10 @@
+"""If a wire/reg/logic/output exists, in a Verilog design, it's rare that it will be assigned a single constant value.
+
+We will flag any such cases.
+"""
+
 import pyslang
-import argparse
+# import argparse
 from typing import Literal
 import re
 
@@ -25,19 +30,20 @@ def clean_verilog_comments(verilog: str) -> str:
     verilog = re.sub(r"/\*.*?\*/", "", verilog, flags=re.DOTALL)
     return verilog
 
+VERILOG_TYPE_LITERAL_t = Literal[
+    "logic", "wire", "input reg", "input wire", "output reg", "output wire", "reg"
+]
 
 def extract_declared_identifiers(
     verilog: str,
 ) -> dict[
-    Literal[
-        "logic", "wire", "input reg", "input wire", "output reg", "output wire", "reg"
-    ],
+    VERILOG_TYPE_LITERAL_t,
     list[str],
 ]:
     """Extract declared identifiers from a Verilog snippet."""
     verilog = clean_verilog_comments(verilog)
 
-    output: dict[Literal["logic", "wire", "input", "output", "reg"], list[str]] = {}
+    output: dict[VERILOG_TYPE_LITERAL_t, list[str]] = {}
 
     # Regex to match declarations
     pattern = re.compile(
@@ -59,6 +65,10 @@ def extract_declared_identifiers(
             .strip()  # remove any array declarations like [0:255]
             for v in var_list.split(",")
         ]
+
+        assert isinstance(var_type, str)
+        assert var_type in ("logic", "wire", "input reg", "input wire", "output reg", "output wire", "reg")
+
         if var_type not in output:
             output[var_type] = []
         output[var_type].extend(identifiers)
@@ -87,3 +97,19 @@ def count_constant_assignments_to_identifier(verilog: str, identifier: str) -> i
             count += 1
 
     return count
+
+def find_all_single_constant_assignments_in_verilog(verilog: str) -> list[tuple[str, str]]:
+    """Find all identifiers with single constant assignments."""
+    verilog = clean_verilog_comments(verilog)
+    identifiers = extract_declared_identifiers(verilog)
+    
+    # Tuple of (identifier name, identifier type)
+    results: list[tuple[str, str]] = []
+
+    for var_type, var_list in identifiers.items():
+        for identifier in var_list:
+            count = count_constant_assignments_to_identifier(verilog, identifier)
+            if count == 1:
+                results.append((identifier, var_type))
+
+    return results

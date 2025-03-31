@@ -1,6 +1,10 @@
 # import pyslang
 
-from scan_26_single_const_assign import extract_declared_identifiers, count_constant_assignments_to_identifier
+from scan_26_single_const_assign import (
+    extract_declared_identifiers,
+    count_constant_assignments_to_identifier,
+    find_all_single_constant_assignments_in_verilog,
+)
 
 
 def test_always_true() -> None:
@@ -46,8 +50,8 @@ endmodule
     assert result["reg"] == ["mem"]
     assert len(result) == 4
 
-def test_count_constant_assignments_to_identifier_1() -> None:
-    verilog = """
+
+VERILOG_SAMPLE_1 = """
 module ConvolutedLogic (
     input  wire clk,
     input  wire rst,
@@ -104,14 +108,32 @@ module ConvolutedLogic (
 endmodule
     """
 
-    assert 1 == count_constant_assignments_to_identifier(verilog, 'only_written_to_once_as_const')
-    assert 0 == count_constant_assignments_to_identifier(verilog, 'dummy_register')
-    assert 0 == count_constant_assignments_to_identifier(verilog, 'inverted')
-    assert 0 == count_constant_assignments_to_identifier(verilog, 'mux_out')
-    assert 0 == count_constant_assignments_to_identifier(verilog, 'and_tree')
-    assert 0 == count_constant_assignments_to_identifier(verilog, 'weird_xor')
-    assert 0 == count_constant_assignments_to_identifier(verilog, 'replicated_bits')
-    assert 0 == count_constant_assignments_to_identifier(verilog, 'reduction_and')
-    assert 0 == count_constant_assignments_to_identifier(verilog, 'feedback')
-    assert 0 == count_constant_assignments_to_identifier(verilog, 'result')
-    assert 0 == count_constant_assignments_to_identifier(verilog, 'not_an_identifier')
+
+def test_count_constant_assignments_to_identifier_1() -> None:
+    assert 1 == count_constant_assignments_to_identifier(
+        VERILOG_SAMPLE_1, "only_written_to_once_as_const"
+    )
+    assert 0 == count_constant_assignments_to_identifier(
+        VERILOG_SAMPLE_1, "dummy_register"
+    )
+    assert 0 == count_constant_assignments_to_identifier(VERILOG_SAMPLE_1, "inverted")
+    assert 0 == count_constant_assignments_to_identifier(VERILOG_SAMPLE_1, "mux_out")
+    assert 0 == count_constant_assignments_to_identifier(VERILOG_SAMPLE_1, "and_tree")
+    assert 0 == count_constant_assignments_to_identifier(VERILOG_SAMPLE_1, "weird_xor")
+    assert 0 == count_constant_assignments_to_identifier(
+        VERILOG_SAMPLE_1, "replicated_bits"
+    )
+    assert 0 == count_constant_assignments_to_identifier(
+        VERILOG_SAMPLE_1, "reduction_and"
+    )
+    assert 0 == count_constant_assignments_to_identifier(VERILOG_SAMPLE_1, "feedback")
+    assert 0 == count_constant_assignments_to_identifier(VERILOG_SAMPLE_1, "result")
+    assert 0 == count_constant_assignments_to_identifier(
+        VERILOG_SAMPLE_1, "not_an_identifier"
+    )
+
+
+def test_find_all_single_constant_assignments_in_verilog() -> None:
+    result = find_all_single_constant_assignments_in_verilog(VERILOG_SAMPLE_1)
+    assert len(result) == 1
+    assert result[0] == ("only_written_to_once_as_const", "wire")

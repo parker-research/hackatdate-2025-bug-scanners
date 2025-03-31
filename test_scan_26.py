@@ -1,6 +1,6 @@
 # import pyslang
 
-from scan_26_single_const_assign import extract_declared_identifiers
+from scan_26_single_const_assign import extract_declared_identifiers, count_constant_assignments_to_identifier
 
 
 def test_always_true() -> None:
@@ -46,7 +46,72 @@ endmodule
     assert result["reg"] == ["mem"]
     assert len(result) == 4
 
+def test_count_constant_assignments_to_identifier_1() -> None:
+    verilog = """
+module ConvolutedLogic (
+    input  wire clk,
+    input  wire rst,
+    input  wire [3:0] selector,
+    output wire result
+);
 
-if __name__ == "__main__":
-    test_always_true()
-    
+    // The one-time assigned constant wire
+    wire only_written_to_once_as_const;
+    assign only_written_to_once_as_const = 1'b1;
+
+    // Internal wires to demonstrate convoluted usage
+    wire inverted;
+    wire mux_out;
+    wire and_tree;
+    wire weird_xor;
+    wire [3:0] replicated_bits;
+    wire feedback;
+
+    // 1. Inversion usage
+    assign inverted = ~only_written_to_once_as_const;
+
+    // 2. Mux-style usage
+    assign mux_out = (selector[0]) ? only_written_to_once_as_const : inverted;
+
+    // 3. AND-tree logic (with other signals)
+    assign and_tree = only_written_to_once_as_const &
+                      selector[1] &
+                      (only_written_to_once_as_const | selector[2]);
+
+    // 4. XOR madness
+    assign weird_xor = only_written_to_once_as_const ^ 
+                       selector[3] ^ 
+                       (inverted & only_written_to_once_as_const);
+
+    // 5. Replication and reduction
+    assign replicated_bits = {4{only_written_to_once_as_const}};
+    wire reduction_and = &replicated_bits;
+
+    // 6. Feedback-like illusion (not really feedback but looks like it)
+    reg dummy_register;
+    always @(posedge clk or posedge rst) begin
+        if (rst)
+            dummy_register <= 1'b0;
+        else
+            dummy_register <= (only_written_to_once_as_const & selector[2]) ^ mux_out;
+    end
+
+    assign feedback = dummy_register & only_written_to_once_as_const;
+
+    // Final output: wrap it all together
+    assign result = (mux_out | weird_xor) & and_tree & feedback & reduction_and;
+
+endmodule
+    """
+
+    assert 1 == count_constant_assignments_to_identifier(verilog, 'only_written_to_once_as_const')
+    assert 0 == count_constant_assignments_to_identifier(verilog, 'dummy_register')
+    assert 0 == count_constant_assignments_to_identifier(verilog, 'inverted')
+    assert 0 == count_constant_assignments_to_identifier(verilog, 'mux_out')
+    assert 0 == count_constant_assignments_to_identifier(verilog, 'and_tree')
+    assert 0 == count_constant_assignments_to_identifier(verilog, 'weird_xor')
+    assert 0 == count_constant_assignments_to_identifier(verilog, 'replicated_bits')
+    assert 0 == count_constant_assignments_to_identifier(verilog, 'reduction_and')
+    assert 0 == count_constant_assignments_to_identifier(verilog, 'feedback')
+    assert 0 == count_constant_assignments_to_identifier(verilog, 'result')
+    assert 0 == count_constant_assignments_to_identifier(verilog, 'not_an_identifier')
